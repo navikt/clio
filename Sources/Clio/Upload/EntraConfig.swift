@@ -9,12 +9,18 @@
 //
 // OAuth flow: Authorization Code + PKCE (no client secret required for public
 // native clients). The redirect URI uses a custom scheme registered in Info.plist.
+// MSAL (Sources/Clio/Upload/GraphAuthService.swift) drives the actual flow.
 //
 // Scopes granted to the enterprise app:
-//   Files.ReadWrite        — write transcript files to SharePoint/OneDrive
-//   Sites.ReadWrite.All    — access Teams channel file libraries
-//   User.Read              — read signed-in user profile (display name, UPN)
-//   ChannelMessage.Read.All — reserved for future Teams message features
+//   Files.ReadWrite         — write transcript files to SharePoint/OneDrive
+//   Sites.ReadWrite.All     — access Teams channel file libraries
+//   User.Read               — read signed-in user profile (display name, UPN)
+//   ChannelMessage.Read.All — used by GraphClient.estimateChannelCreatedDate(...)
+//                             to approximate a channel's creation time for the
+//                             24-hour backup-exclusion compliance guard. Direct
+//                             channel metadata (which has a real createdDateTime)
+//                             needs Channel.ReadBasic.All, which was NOT granted,
+//                             so this is a best-effort heuristic, not exact.
 
 import Foundation
 
@@ -44,5 +50,6 @@ enum EntraConfig {
         "https://graph.microsoft.com/Files.ReadWrite",
         "https://graph.microsoft.com/Sites.ReadWrite.All",
         "https://graph.microsoft.com/User.Read",
+        "https://graph.microsoft.com/ChannelMessage.Read.All",
     ]
 }

@@ -2,9 +2,9 @@
 // Clio
 //
 // App-level state persisted as `state/app.json` inside the ARM data root.
-// Currently holds the migration marker so the one-shot legacy-Desktop
-// migration only runs once. Future phases will add project configuration
-// (Teams destination, etc.) here.
+// Holds the migration marker so the one-shot legacy-Desktop migration only
+// runs once, plus the single configured Teams upload destination — Clio
+// has no "project" concept, just one channel every upload goes to.
 //
 // Reads and writes go through atomic temp-file-then-rename to avoid corrupt
 // state if the app is killed mid-write.
@@ -32,12 +32,9 @@ struct AppState: Codable, Equatable {
     /// the first-pass-only version still get their legacy metadata migrated
     /// on next launch without needing a manual reset.
     var legacyMetadataCleanedAt: Date?
-    /// All configured projects. Replaces the former single `currentProject` slot.
-    /// Empty list means no projects configured — upload is blocked.
-    var projects: [ProjectConfig]
-    /// The project currently selected in the sidebar / active context.
-    /// Used as default assignment for new recordings. Not enforced.
-    var activeProjectId: UUID?
+    /// The single Teams channel every upload goes to. `nil` means it hasn't
+    /// been configured yet — upload is blocked until it is.
+    var teamsChannel: TeamsChannelRef?
     /// Global allowlist of strings that must NOT be redacted by the
     /// de-identification (avidentifisering) pipeline, even when the
     /// upstream NER model flags them. Case-insensitive, exact-match
@@ -64,8 +61,7 @@ struct AppState: Codable, Equatable {
         migrationCompletedAt: Date? = nil,
         migrationRecordingCount: Int? = nil,
         legacyMetadataCleanedAt: Date? = nil,
-        projects: [ProjectConfig] = [],
-        activeProjectId: UUID? = nil,
+        teamsChannel: TeamsChannelRef? = nil,
         avidentExceptions: [String] = [],
         hasSeededDefaultExceptions: Bool = false
     ) {
@@ -73,8 +69,7 @@ struct AppState: Codable, Equatable {
         self.migrationCompletedAt = migrationCompletedAt
         self.migrationRecordingCount = migrationRecordingCount
         self.legacyMetadataCleanedAt = legacyMetadataCleanedAt
-        self.projects = projects
-        self.activeProjectId = activeProjectId
+        self.teamsChannel = teamsChannel
         self.avidentExceptions = avidentExceptions
         self.hasSeededDefaultExceptions = hasSeededDefaultExceptions
     }
@@ -86,10 +81,7 @@ struct AppState: Codable, Equatable {
         case migrationCompletedAt
         case migrationRecordingCount
         case legacyMetadataCleanedAt
-        case projects
-        case activeProjectId
-        // Legacy key — read-only, migrated into `projects` on decode.
-        case currentProject
+        case teamsChannel
         case avidentExceptions
         case hasSeededDefaultExceptions
     }
@@ -103,19 +95,7 @@ struct AppState: Codable, Equatable {
         avidentExceptions = try c.decodeIfPresent([String].self, forKey: .avidentExceptions) ?? []
         hasSeededDefaultExceptions = try c.decodeIfPresent(
             Bool.self, forKey: .hasSeededDefaultExceptions) ?? false
-
-        // Multi-project migration: if `projects` is present use it directly;
-        // otherwise promote the legacy `currentProject` singleton if present.
-        if let existing = try c.decodeIfPresent([ProjectConfig].self, forKey: .projects) {
-            projects = existing
-            activeProjectId = try c.decodeIfPresent(UUID.self, forKey: .activeProjectId)
-        } else if let legacy = try c.decodeIfPresent(ProjectConfig.self, forKey: .currentProject) {
-            projects = [legacy]
-            activeProjectId = legacy.id
-        } else {
-            projects = []
-            activeProjectId = nil
-        }
+        teamsChannel = try c.decodeIfPresent(TeamsChannelRef.self, forKey: .teamsChannel)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -124,11 +104,9 @@ struct AppState: Codable, Equatable {
         try c.encodeIfPresent(migrationCompletedAt, forKey: .migrationCompletedAt)
         try c.encodeIfPresent(migrationRecordingCount, forKey: .migrationRecordingCount)
         try c.encodeIfPresent(legacyMetadataCleanedAt, forKey: .legacyMetadataCleanedAt)
-        try c.encode(projects, forKey: .projects)
-        try c.encodeIfPresent(activeProjectId, forKey: .activeProjectId)
+        try c.encodeIfPresent(teamsChannel, forKey: .teamsChannel)
         try c.encode(avidentExceptions, forKey: .avidentExceptions)
         try c.encode(hasSeededDefaultExceptions, forKey: .hasSeededDefaultExceptions)
-        // Legacy `currentProject` key is NOT written — new format only.
     }
 }
 

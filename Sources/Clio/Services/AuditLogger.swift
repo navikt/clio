@@ -240,12 +240,10 @@ class AuditLogger {
         ])
     }
 
-    /// Emitted when the researcher confirms the compliance checklist before the first upload
-    /// in a project (US-FM-15). `projectId` is the local project identifier from `state/app.json`.
-    func logComplianceCheckConfirmed(projectId: String) {
-        log(.complianceCheckConfirmed, payload: [
-            "projectId": .string(projectId)
-        ])
+    /// Emitted when the researcher confirms the compliance checklist before
+    /// the first upload (US-FM-15).
+    func logComplianceCheckConfirmed() {
+        log(.complianceCheckConfirmed)
     }
 
     /// Records that a researcher explicitly signed off that a transcript is
@@ -264,26 +262,23 @@ class AuditLogger {
         ])
     }
 
-    func logUploadQueued(recordingId: UUID, projectId: UUID, remoteName: String) {
+    func logUploadQueued(recordingId: UUID, remoteName: String) {
         log(.uploadQueued, payload: [
             "recordingId": .string(recordingId.uuidString),
-            "projectId": .string(projectId.uuidString),
             "remoteName": .string(remoteName)
         ])
     }
 
-    func logUploadCompleted(recordingId: UUID, projectId: UUID, remoteName: String) {
+    func logUploadCompleted(recordingId: UUID, remoteName: String) {
         log(.uploadCompleted, payload: [
             "recordingId": .string(recordingId.uuidString),
-            "projectId": .string(projectId.uuidString),
             "remoteName": .string(remoteName)
         ])
     }
 
-    func logUploadFailed(recordingId: UUID, projectId: UUID, reason: String) {
+    func logUploadFailed(recordingId: UUID, reason: String) {
         log(.uploadFailed, payload: [
             "recordingId": .string(recordingId.uuidString),
-            "projectId": .string(projectId.uuidString),
             "reason": .string(reason)
         ])
     }

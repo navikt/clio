@@ -36,7 +36,7 @@ final class TranscriptionRunner: ObservableObject {
         let defaults = UserDefaults.standard
         let modelRaw = defaults.string(forKey: "transcription.defaultModel")
             ?? TranscriptionModel.large.rawValue
-        let model = TranscriptionModel(rawValue: modelRaw) ?? .medium
+        let model = TranscriptionModel(rawValue: modelRaw) ?? .large
         let numBeams: Int = {
             let v = defaults.integer(forKey: "transcription.numBeams")
             return v == 0 ? 3 : v

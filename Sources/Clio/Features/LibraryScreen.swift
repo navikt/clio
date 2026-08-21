@@ -956,7 +956,7 @@ struct RecordingPlayerNative: View {
                         Label(AppCopy.Labels.transcribeWithNBWhisper, systemImage: "waveform.and.mic")
                     }
                     .disabled(transcriptionService.isBusy)
-                    let model = TranscriptionModel(rawValue: defaultModelRaw) ?? .medium
+                    let model = TranscriptionModel(rawValue: defaultModelRaw) ?? .large
                     if transcriptionService.isBusy {
                         Text("En transkripsjon kjører allerede – vennligst vent.")
                             .font(.caption)
@@ -1068,7 +1068,7 @@ struct RecordingPlayerNative: View {
     // MARK: - Actions
 
     private func startTranscription() {
-        let model = TranscriptionModel(rawValue: defaultModelRaw) ?? .medium
+        let model = TranscriptionModel(rawValue: defaultModelRaw) ?? .large
         let audioURL = recording.audioURL
 
         transcriptionTask?.cancel()

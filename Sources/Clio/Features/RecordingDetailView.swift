@@ -224,7 +224,7 @@ struct RecordingDetailView: View {
     }
 
     private var transcriptionNotStarted: some View {
-        let model = TranscriptionModel(rawValue: defaultModelRaw) ?? .medium
+        let model = TranscriptionModel(rawValue: defaultModelRaw) ?? .large
         return VStack(alignment: .leading, spacing: 12) {
             Button(action: startTranscription) {
                 HStack(spacing: 8) {
@@ -255,7 +255,7 @@ struct RecordingDetailView: View {
     }
 
     private var transcriptionInProgress: some View {
-        let model = TranscriptionModel(rawValue: defaultModelRaw) ?? .medium
+        let model = TranscriptionModel(rawValue: defaultModelRaw) ?? .large
         return VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
                 ProgressView()
@@ -600,7 +600,7 @@ struct RecordingDetailView: View {
             return
         }
 
-        let model = TranscriptionModel(rawValue: defaultModelRaw) ?? .medium
+        let model = TranscriptionModel(rawValue: defaultModelRaw) ?? .large
         let audioURL = recording.audioURL
 
         transcriptionTask?.cancel()

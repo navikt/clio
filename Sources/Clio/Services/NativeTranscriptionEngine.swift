@@ -8,10 +8,9 @@ import WhisperKit
 /// entitlement conflict. The bundled model is the official
 /// `NbAiLab/nb-whisper-large` weights, converted to WhisperKit's CoreML
 /// format via `whisperkittools` (see `packaging/convert_nb_whisper.md` for
-/// the conversion recipe). `TranscriptionModel.tiny/.base/.medium` currently
-/// all route to the same bundled `large` model — only `large` has been
-/// converted so far; see `native-whisperkit-model-conversion` follow-up for
-/// bundling the smaller variants.
+/// the conversion recipe). This is the only model Clio uses — the smaller
+/// tiny/base/medium variants were never bundled and the model-size choice
+/// was removed entirely rather than left as a misleading picker.
 actor NativeTranscriptionEngine {
     static let shared = NativeTranscriptionEngine()
 

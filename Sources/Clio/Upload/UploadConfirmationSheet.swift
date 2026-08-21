@@ -2,35 +2,27 @@
 // Clio
 //
 // Shown when the researcher taps "Last opp". Lets the researcher:
-//   1. Pick (or confirm) which project to upload to
-//   2. See exactly what filename will appear on Teams
-//   3. Confirm the anonymization responsibility checkbox
-//   4. Read the 8-month Teams retention reminder
-//   5. Tap "Bekreft og last opp" to proceed
+//   1. See exactly what filename will appear on Teams
+//   2. Confirm the anonymization responsibility checkbox
+//   3. Read the 8-month Teams retention reminder
+//   4. Tap "Bekreft og last opp" to proceed
+//
+// Clio has no "project" concept — there's exactly one configured Teams
+// channel every upload goes to, so there's nothing to pick or confirm here.
 
 import SwiftUI
 
 struct UploadConfirmationSheet: View {
 
     let recording: RecordingMeta
-    let projects: [ProjectConfig]
-    /// Called with the selected project and remote filename when confirmed.
-    let onConfirmed: (ProjectConfig, String) -> Void
+    /// Called with the remote filename when confirmed.
+    let onConfirmed: (String) -> Void
     let onCancel: () -> Void
 
-    @State private var selectedProjectId: UUID?
     @State private var anonymizationConfirmed = false
-
-    private var selectedProject: ProjectConfig? {
-        projects.first { $0.id == selectedProjectId }
-    }
 
     private var remoteName: String {
         UploadGate.remoteName(displayName: recording.displayName, createdAt: recording.createdAt)
-    }
-
-    private var canConfirm: Bool {
-        selectedProject != nil && anonymizationConfirmed
     }
 
     var body: some View {
@@ -50,9 +42,6 @@ struct UploadConfirmationSheet: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.xl) {
-
-                    // Project picker
-                    projectPickerSection
 
                     // File preview
                     filePreviewSection(remoteName: remoteName)
@@ -75,70 +64,17 @@ struct UploadConfirmationSheet: View {
                     .foregroundStyle(.secondary)
 
                 Button("Bekreft og last opp") {
-                    guard let project = selectedProject else { return }
-                    onConfirmed(project, remoteName)
+                    onConfirmed(remoteName)
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(!canConfirm)
+                .disabled(!anonymizationConfirmed)
             }
             .padding(AppSpacing.xl)
         }
         .frame(width: 480)
-        .onAppear {
-            // Pre-select the recording's current project if set and available
-            if let projectId = recording.projectId,
-               projects.contains(where: { $0.id == projectId }) {
-                selectedProjectId = projectId
-            } else if projects.count == 1 {
-                selectedProjectId = projects[0].id
-            }
-        }
     }
 
     // MARK: - Sections
-
-    private var projectPickerSection: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            Label("Destinasjon", systemImage: "folder")
-                .font(AppFont.pillLabel)
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-
-            if projects.isEmpty {
-                Text("Ingen prosjekter er konfigurert. Gå til innstillinger for å legge til et prosjekt.")
-                    .font(AppFont.tableCell)
-                    .foregroundStyle(AppColors.warning)
-            } else {
-                Picker("Velg prosjekt", selection: $selectedProjectId) {
-                    Text("Velg prosjekt…").tag(Optional<UUID>.none)
-                    ForEach(projects) { project in
-                        VStack(alignment: .leading) {
-                            Text(project.projectName)
-                            if let channel = project.studyChannel {
-                                Text(channel.displayName)
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .tag(Optional(project.id))
-                    }
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
-
-                if let project = selectedProject, let channel = project.studyChannel {
-                    HStack(spacing: AppSpacing.xs) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(AppColors.success)
-                            .font(.system(size: 12))
-                        Text("Laster opp til: \(channel.displayName)")
-                            .font(AppFont.tableCell)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-        }
-    }
 
     private func filePreviewSection(remoteName: String) -> some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {

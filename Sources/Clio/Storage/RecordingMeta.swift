@@ -236,9 +236,6 @@ struct RecordingMeta: Codable, Equatable, Identifiable {
     /// Set by the researcher before upload. Used to generate the Teams
     /// filename. Upload is blocked if this is nil or empty.
     var neutralCode: String?
-    /// The project this recording belongs to. Nil means unassigned.
-    /// Upload is blocked when nil — researcher must assign a project first.
-    var projectId: UUID?
     /// Set when this recording was imported from a Clio Recorder iOS device
     /// via the Bonjour/USB transfer flow. `nil` for recordings captured on Mac.
     var mobileImport: MobileImportMeta?
@@ -290,7 +287,6 @@ struct RecordingMeta: Codable, Equatable, Identifiable {
         case upload
         case lastWarningDate
         case neutralCode
-        case projectId
         case mobileImport
     }
 
@@ -309,7 +305,6 @@ struct RecordingMeta: Codable, Equatable, Identifiable {
         upload = try c.decodeIfPresent(UploadState.self, forKey: .upload) ?? UploadState()
         lastWarningDate = try c.decodeIfPresent(Date.self, forKey: .lastWarningDate)
         neutralCode = try c.decodeIfPresent(String.self, forKey: .neutralCode)
-        projectId = try c.decodeIfPresent(UUID.self, forKey: .projectId)
         mobileImport = try c.decodeIfPresent(MobileImportMeta.self, forKey: .mobileImport)
     }
 
@@ -325,7 +320,6 @@ struct RecordingMeta: Codable, Equatable, Identifiable {
         upload: UploadState,
         lastWarningDate: Date? = nil,
         neutralCode: String? = nil,
-        projectId: UUID? = nil,
         mobileImport: MobileImportMeta? = nil
     ) {
         self.schemaVersion = schemaVersion
@@ -339,7 +333,6 @@ struct RecordingMeta: Codable, Equatable, Identifiable {
         self.upload = upload
         self.lastWarningDate = lastWarningDate
         self.neutralCode = neutralCode
-        self.projectId = projectId
         self.mobileImport = mobileImport
     }
 }

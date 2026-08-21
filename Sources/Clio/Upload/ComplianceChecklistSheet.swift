@@ -1,21 +1,20 @@
 // ComplianceChecklistSheet.swift
 // Clio
 //
-// One-time per-project compliance checklist that must be confirmed before the
-// first upload in a project. Sourced from the NAV routine for midlertidig
-// lagring av innsiktsdata (ref. PVK 25/35628). See US-FM-15.
+// One-time compliance checklist that must be confirmed before the first
+// upload. Sourced from the NAV routine for midlertidig lagring av
+// innsiktsdata (ref. PVK 25/35628). See US-FM-15.
 //
-// Once confirmed, `ProjectConfig.complianceConfirmedAt` is set and this sheet
-// is not shown again for the same project. The researcher can access it any
-// time via project settings.
+// Note: not currently wired into the upload flow (no call site yet) —
+// available for a future gate, kept project-agnostic since Clio has no
+// "project" concept.
 
 import SwiftUI
 
 struct ComplianceChecklistSheet: View {
 
-    let project: ProjectConfig
-    /// Called with the updated project after compliance is confirmed.
-    let onConfirmed: (ProjectConfig) -> Void
+    /// Called once compliance is confirmed.
+    let onConfirmed: () -> Void
     let onCancel: () -> Void
 
     @State private var checked: Set<Int> = []
@@ -58,9 +57,6 @@ struct ComplianceChecklistSheet: View {
                     .foregroundStyle(AppColors.accent)
                 Text("Bekreft krav før opplasting")
                     .font(AppFont.screenTitle)
-                Text("Prosjekt: \(project.projectName)")
-                    .font(AppFont.tableCell)
-                    .foregroundStyle(.secondary)
             }
             .padding(.top, AppSpacing.xl)
             .padding(.bottom, AppSpacing.lg)
@@ -114,10 +110,8 @@ struct ComplianceChecklistSheet: View {
     }
 
     private func confirm() {
-        var updated = project
-        updated.complianceConfirmedAt = Date()
-        AuditLogger.shared.logComplianceCheckConfirmed(projectId: project.id.uuidString)
-        onConfirmed(updated)
+        AuditLogger.shared.logComplianceCheckConfirmed()
+        onConfirmed()
     }
 }
 

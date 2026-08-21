@@ -3,13 +3,12 @@ import SwiftUI
 // MARK: - Settings View
 
 /// Settings panel for no-transcribe configuration.
-/// Shows installation status, model selection, and per-run defaults.
+/// Shows installation status and per-run defaults. Clio always transcribes
+/// with the large NB-Whisper model — there is no model size to choose.
 struct TranscriptionSettingsView: View {
     @ObservedObject private var service = TranscriptionService.shared
 
     // Persisted defaults
-    @AppStorage("transcription.defaultModel")   private var defaultModelRaw = TranscriptionModel.large.rawValue
-
     @AppStorage("transcription.verbatim")        private var verbatim = false
     @AppStorage("transcription.language")        private var language = "no"
     @AppStorage("transcription.validateMode")    private var validateMode = "warn"
@@ -17,23 +16,12 @@ struct TranscriptionSettingsView: View {
     // Transient UI state
     @State private var installState: ActionState = .idle
     @State private var updateState: ActionState = .idle
-    @State private var downloadState: ActionState = .idle
-    @State private var downloadingModel: TranscriptionModel?
     @State private var versionString: String? = nil
-
-    private var defaultModel: Binding<TranscriptionModel> {
-        Binding(
-            get: { TranscriptionModel(rawValue: defaultModelRaw) ?? .medium },
-            set: { defaultModelRaw = $0.rawValue }
-        )
-    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 installSection
-                Divider()
-                modelSection
                 Divider()
                 defaultsSection
             }
@@ -139,64 +127,6 @@ struct TranscriptionSettingsView: View {
         }
     }
 
-    // MARK: - Model section
-
-    private var modelSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("Modellstørrelser", systemImage: "cpu")
-
-            GroupBox {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Last ned modellvekter lokalt for raskere oppstart. Vektene lagres i Clio sin modellmappe.")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    ForEach(TranscriptionModel.allCases) { model in
-                        HStack(spacing: 10) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 6) {
-                                    Text(model.displayName)
-                                        .font(.system(size: 13, weight: .medium))
-                                    Text(model.estimatedRAM)
-                                        .font(.system(size: 11))
-                                        .foregroundStyle(.secondary)
-                                        .padding(.horizontal, 5)
-                                        .padding(.vertical, 2)
-                                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
-                                }
-                                Text(model.modelDescription)
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            if downloadingModel == model && downloadState == .running {
-                                ProgressView()
-                                    .progressViewStyle(.circular)
-                                    .scaleEffect(0.6)
-                            } else {
-                                Button("Last ned") {
-                                    performDownload(model)
-                                }
-                                .buttonStyle(.bordered)
-                                    .disabled(!service.isInstalled || downloadState == .running || {
-                                        if case .downloading = service.modelDownloadState { return true }
-                                        return false
-                                    }())
-                                    .font(.system(size: 12))
-                                }
-                        }
-                        if model != TranscriptionModel.allCases.last {
-                            Divider()
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(4)
-            }
-        }
-    }
-
     // MARK: - Defaults section
 
     private var defaultsSection: some View {
@@ -205,19 +135,6 @@ struct TranscriptionSettingsView: View {
 
             GroupBox {
                 VStack(alignment: .leading, spacing: 14) {
-
-                    // Default model picker
-                    LabeledContent("Standard modell") {
-                        Picker("", selection: defaultModel) {
-                            ForEach(TranscriptionModel.allCases) { model in
-                                Text(model.displayName).tag(model)
-                            }
-                        }
-                        .labelsHidden()
-                        .frame(width: 120)
-                    }
-
-                    Divider()
 
                     // Transkripsjonsformat
                     VStack(alignment: .leading, spacing: 8) {
@@ -372,20 +289,6 @@ struct TranscriptionSettingsView: View {
             } catch {
                 await MainActor.run { updateState = .failed(error.localizedDescription) }
             }
-        }
-    }
-
-    private func performDownload(_ model: TranscriptionModel) {
-        downloadingModel = model
-        downloadState = .running
-        Task {
-            do {
-                try await service.downloadModel(model)
-                await MainActor.run { downloadState = .success }
-            } catch {
-                await MainActor.run { downloadState = .failed(error.localizedDescription) }
-            }
-            await MainActor.run { downloadingModel = nil }
         }
     }
 }

@@ -3,7 +3,11 @@
 //
 // Upload widget shown in RecordingDetailView's right panel after transcription.
 // Gate: transcript must exist AND researcher must have confirmed de-identification.
-// Actual Azure AD / Graph API integration is a separate upcoming phase.
+// Real Microsoft Graph upload — see TeamsUploadService.performGraphUpload
+// and GraphClient. Tapping "Last opp til Teams" signs the researcher in
+// (if needed) and then presents UploadConfirmationSheet for a final check
+// before uploading to the one configured Teams channel — Clio has no
+// "project" concept, just one destination every recording uploads to.
 
 import SwiftUI
 
@@ -12,18 +16,45 @@ struct TeamsUploadSection: View {
     let recording: RecordingMeta
 
     @StateObject private var uploadService = TeamsUploadService.shared
-    @State private var showComingSoonAlert = false
+    @ObservedObject private var authService = GraphAuthService.shared
+    @State private var configurationErrorMessage: String?
+    @State private var isSigningIn = false
+    @State private var showingConfirmationSheet = false
 
     private var readiness: UploadReadiness {
         UploadGate.evaluate(recording: recording)
     }
 
+    /// The one configured Teams destination. `nil` means it hasn't been
+    /// set up yet in Settings.
+    private var channel: TeamsChannelRef? {
+        AppStateStore.load().teamsChannel
+    }
+
     var body: some View {
         sectionBody
-            .alert("Funksjonen kommer snart", isPresented: $showComingSoonAlert) {
+            .alert(
+                "Kan ikke laste opp",
+                isPresented: Binding(
+                    get: { configurationErrorMessage != nil },
+                    set: { if !$0 { configurationErrorMessage = nil } }
+                )
+            ) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("Opplasting til Teams er under utvikling og vil være tilgjengelig i en kommende versjon.")
+                Text(configurationErrorMessage ?? "")
+            }
+            .sheet(isPresented: $showingConfirmationSheet) {
+                if let channel {
+                    UploadConfirmationSheet(
+                        recording: recording,
+                        onConfirmed: { remoteName in
+                            showingConfirmationSheet = false
+                            startUpload(channel: channel, remoteName: remoteName)
+                        },
+                        onCancel: { showingConfirmationSheet = false }
+                    )
+                }
             }
     }
 
@@ -96,11 +127,23 @@ struct TeamsUploadSection: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
 
-            Button("Last opp til Teams") {
-                showComingSoonAlert = true
+            Button {
+                beginUploadFlow()
+            } label: {
+                if isSigningIn {
+                    HStack(spacing: 6) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Logger inn…")
+                    }
+                    .frame(maxWidth: .infinity)
+                } else {
+                    Text("Last opp til Teams")
+                        .frame(maxWidth: .infinity)
+                }
             }
             .buttonStyle(PillButtonStyle(variant: .primary))
-            .frame(maxWidth: .infinity)
+            .disabled(isSigningIn)
         }
     }
 
@@ -150,9 +193,49 @@ struct TeamsUploadSection: View {
             }
 
             Button("Prøv igjen") {
-                showComingSoonAlert = true
+                beginUploadFlow()
             }
             .buttonStyle(PillButtonStyle(variant: .primary))
+        }
+    }
+
+    // MARK: - Actions
+
+    /// Entry point for "Last opp til Teams" / "Prøv igjen". Checks the
+    /// Teams channel is configured, signs the researcher in if needed (same
+    /// button, no separate "Logg inn" state), and only then shows the
+    /// confirmation sheet — signing in and confirming are two steps of one
+    /// flow, not two separate actions the researcher has to trigger.
+    private func beginUploadFlow() {
+        guard !isSigningIn else { return }
+        guard channel != nil else {
+            configurationErrorMessage = """
+            Ingen Teams-kanal er konfigurert ennå. Gå til Innstillinger → Teams.
+            """
+            return
+        }
+        if authService.signedIn {
+            showingConfirmationSheet = true
+            return
+        }
+        isSigningIn = true
+        Task {
+            do {
+                try await authService.signInInteractive()
+                isSigningIn = false
+                showingConfirmationSheet = true
+            } catch {
+                print("🔑 TeamsUploadSection.beginUploadFlow: caught error: \(error)")
+                isSigningIn = false
+                configurationErrorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    /// Starts the actual Graph upload to the one configured channel.
+    private func startUpload(channel: TeamsChannelRef, remoteName: String) {
+        Task {
+            await uploadService.upload(recording: recording, channel: channel, remoteName: remoteName)
         }
     }
 }

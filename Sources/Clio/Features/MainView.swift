@@ -14,6 +14,7 @@ struct MainView: View {
     @State private var showLogViewer = false
     @State private var showDesignShowcase = false
     @State private var showSettings = false
+    @State private var settingsTab: SettingsTab = .transcription
     @State private var airDropToast: String?
 
     var body: some View {
@@ -78,8 +79,21 @@ struct MainView: View {
                 .padding(.horizontal, 24)
                 .padding(.vertical, 16)
                 Divider()
+                Picker("", selection: $settingsTab) {
+                    Text("Transkripsjon").tag(SettingsTab.transcription)
+                    Text("Teams").tag(SettingsTab.teams)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .padding(.horizontal, 24)
+                .padding(.top, 12)
                 ScrollView {
-                    TranscriptionSettingsView()
+                    switch settingsTab {
+                    case .transcription:
+                        TranscriptionSettingsView()
+                    case .teams:
+                        TeamsSettingsView()
+                    }
                 }
             }
             .frame(minWidth: 520, minHeight: 500)
@@ -188,4 +202,11 @@ struct MainView: View {
             break
         }
     }
+}
+
+/// Which panel the settings sheet shows. Kept private to `MainView` since
+/// it's purely a UI-navigation concern, not app state.
+private enum SettingsTab {
+    case transcription
+    case teams
 }

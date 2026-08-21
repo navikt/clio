@@ -1,46 +1,29 @@
 import Foundation
 
-// MARK: - Model size
+// MARK: - Model
 
+/// Clio always transcribes with the large NB-Whisper model — the smaller
+/// variants (tiny/base/medium) were never actually bundled and all
+/// silently routed to this same model anyway (see
+/// `NativeTranscriptionEngine`), so the size choice was removed entirely
+/// rather than left as a misleading picker.
 enum TranscriptionModel: String, CaseIterable, Identifiable, Codable {
-    case tiny
-    case base
-    case medium
     case large
 
     var id: String { rawValue }
 
     /// Norwegian display name shown in the UI.
     var displayName: String {
-        switch self {
-        case .tiny:   return "Liten"
-        case .base:   return "Basis"
-        case .medium: return "Medium"
-        case .large:  return "Stor"
-        }
+        "Stor"
     }
 
     /// Approximate RAM requirement for the model.
     var estimatedRAM: String {
-        switch self {
-        case .tiny:   return "~1 GB"
-        case .base:   return "~2 GB"
-        case .medium: return "~4 GB"
-        case .large:  return "~8 GB"
-        }
+        "~8 GB"
     }
 
-    /// Norwegian description shown in the settings picker.
+    /// Norwegian description shown in the settings UI.
     var modelDescription: String {
-        switch self {
-        case .tiny:
-            return "Raskest, lavest nøyaktighet. Egnet for testing og korte klipp."
-        case .base:
-            return "Rask med akseptabel nøyaktighet. God for korte intervjuer."
-        case .medium:
-            return "God balanse mellom hastighet og nøyaktighet."
-        case .large:
-            return "Anbefalt. Høyest nøyaktighet. Krever mer behandlingstid."
-        }
+        "Høyest nøyaktighet."
     }
 }
